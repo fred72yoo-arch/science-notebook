@@ -306,6 +306,24 @@ const MOCK = [
 ];
 
 /* ─── TTS 헬퍼 ─── */
+function pickKoFemale(voices) {
+  const ko = voices.filter((v) => v.lang.startsWith("ko"));
+  if (ko.length === 0) return null;
+  // 1순위: Google 한국어 (Chrome 여성 음성, 가장 자연스러움)
+  const google = ko.find((v) => v.name.includes("Google"));
+  if (google) return google;
+  // 2순위: 알려진 여성 음성 키워드
+  const femaleKeys = ["yuna", "sora", "sunhi", "heami", "female", "여성", "여자"];
+  const female = ko.find((v) => femaleKeys.some((k) => v.name.toLowerCase().includes(k)));
+  if (female) return female;
+  // 3순위: 남성 키워드 제외
+  const maleKeys = ["male", "남성", "남자", "jian", "minsu"];
+  const notMale = ko.find((v) => !maleKeys.some((k) => v.name.toLowerCase().includes(k)));
+  if (notMale) return notMale;
+  // fallback
+  return ko[0];
+}
+
 function useVoice() {
   const [speaking, setSpeaking] = useState(null);
   const [voices, setVoices] = useState([]);
@@ -323,9 +341,9 @@ function useVoice() {
   const speak = useCallback((text, id) => {
     window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
-    u.lang = "ko-KR"; u.rate = 0.9;
-    const ko = voices.find((v) => v.lang.startsWith("ko"));
-    if (ko) u.voice = ko;
+    u.lang = "ko-KR"; u.rate = 1.1;
+    const best = pickKoFemale(voices);
+    if (best) u.voice = best;
     u.onstart = () => setSpeaking(id);
     u.onend = () => setSpeaking(null);
     u.onerror = () => setSpeaking(null);
@@ -817,6 +835,7 @@ function Library({ problems, onSelect }) {
   const [fU, setFU] = useState("all");
   const [fT, setFT] = useState("all");
   const [printMode, setPrintMode] = useState(false);
+  const [printStyle, setPrintStyle] = useState("large");
 
   const grades = useMemo(() => ["all", ...new Set(problems.map((p) => p.grade).filter(Boolean))], [problems]);
   const subjects = useMemo(() => ["all", ...new Set(problems.map((p) => p.subject).filter(Boolean))], [problems]);
@@ -837,30 +856,38 @@ function Library({ problems, onSelect }) {
     }).sort((a, b) => b.createdAt - a.createdAt);
   }, [problems, q, fG, fS, fU, fT]);
 
-  useEffect(() => {
-    if (!printMode) return;
-    const timer = setTimeout(() => window.print(), 600);
-    const exit = () => setPrintMode(false);
-    window.addEventListener("afterprint", exit);
-    let iosFb = null;
-    const onFocus = () => { iosFb = setTimeout(exit, 300); };
-    const onVis = () => { if (document.visibilityState === "visible") { iosFb = setTimeout(exit, 300); } };
-    window.addEventListener("focus", onFocus);
-    document.addEventListener("visibilitychange", onVis);
-    return () => { clearTimeout(timer); if (iosFb) clearTimeout(iosFb); window.removeEventListener("afterprint", exit); window.removeEventListener("focus", onFocus); document.removeEventListener("visibilitychange", onVis); };
-  }, [printMode]);
+  const handlePrint = () => { window.print(); };
 
   if (printMode) {
+    const isLarge = printStyle === "large";
     return (
       <div className="max-w-3xl mx-auto p-6 print-area" style={{background:"#fff",color:"#1e293b"}}>
-        <button onClick={() => setPrintMode(false)} className="mb-4 text-sm np flex items-center gap-1 hover:underline" style={{color:"#059669"}}><Ic n="cl" sz={14} /> 돌아가기</button>
+        <div className="np mb-4 flex items-center justify-between flex-wrap gap-2">
+          <button onClick={() => setPrintMode(false)} className="text-sm flex items-center gap-1 hover:underline" style={{color:"#059669"}}><Ic n="cl" sz={14} /> 돌아가기</button>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setPrintStyle("large")}
+              className={"px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors " + (isLarge ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200")}>
+              🖼 큰 이미지 (1문제/쪽)
+            </button>
+            <button onClick={() => setPrintStyle("compact")}
+              className={"px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors " + (!isLarge ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200")}>
+              📄 간결 (여러문제/쪽)
+            </button>
+            <button onClick={handlePrint}
+              className="px-4 py-1.5 rounded-lg text-xs font-bold bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md active:scale-[0.98] transition-transform">
+              🖨 출력하기
+            </button>
+          </div>
+        </div>
         <div className="text-center mb-8 border-b-2 pb-6">
           <div className="text-3xl mb-2">🔬</div>
           <h1 className="text-2xl font-bold" style={{color:"#1e293b"}}>NW_HW 과학 오답노트 byYoo</h1>
           <p className="text-sm mt-2" style={{color:"#64748b"}}>{fG !== "all" ? fG : "모든 학년"} · {fS !== "all" ? fS : "모든 과목"} · {fU !== "all" ? fU : "모든 단원"} · {list.length}문제 · {new Date().toLocaleDateString("ko-KR")}</p>
         </div>
         {list.map((p, idx) => (
-          <div key={p.id} style={{ pageBreakInside: "avoid" }} className="mb-8 border-b pb-6">
+          <div key={p.id}
+            style={isLarge ? { pageBreakAfter: "always" } : { pageBreakInside: "avoid" }}
+            className={isLarge ? "mb-4" : "mb-8 border-b pb-6"}>
             <h2 className="text-lg font-bold mb-2" style={{color:"#1e293b"}}>{idx + 1}. {p.title}</h2>
             <div className="flex flex-wrap gap-1 mb-2 text-xs">
               {p.grade && <span className="px-2 py-0.5 rounded" style={{background:"#d1fae5",color:"#059669"}}>{p.grade}</span>}
@@ -868,7 +895,10 @@ function Library({ problems, onSelect }) {
               {p.unit && <span className="px-2 py-0.5 rounded" style={{background:"#ccfbf1",color:"#0d9488"}}>{p.unit}</span>}
               {p.difficulty && <span className="px-2 py-0.5 rounded" style={{background:"#f1f5f9"}}>난이도 {p.difficulty}</span>}
             </div>
-            <img src={p.problemImg} alt={p.title} className="w-full max-h-72 object-contain border rounded-xl mb-3" onError={(e) => { e.target.style.display="none"; }} />
+            <img src={p.problemImg} alt={p.title}
+              className={"w-full object-contain border rounded-xl mb-3" + (isLarge ? "" : " max-h-72")}
+              style={isLarge ? { maxHeight: "50vh" } : {}}
+              onError={(e) => { e.target.style.display="none"; }} />
             {p.problemText && <p className="text-sm italic mb-2" style={{color:"#475569"}}>{p.problemText}</p>}
             {p.errorAnalysis && (
               <div className="p-3 border-2 rounded-xl mb-3 text-sm" style={{borderColor:"#fca5a5",background:"#fef2f2",color:"#991b1b"}}>
@@ -1311,6 +1341,7 @@ function App() {
           @page{margin:15mm 10mm}
           .print-area,.print-area *{color-adjust:exact!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
           .print-area{background:#fff!important;color:#1e293b!important}
+          .print-area img:not(.max-h-72){max-height:none!important;width:100%!important}
           .dm{background:#f8fafc!important;color:#334155!important}
           .dm *{text-shadow:none!important;box-shadow:none!important}
           .dm .bg-slate-50{background:#f8fafc!important}
