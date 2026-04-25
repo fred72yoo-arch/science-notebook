@@ -6,7 +6,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="theme-color" content="#059669" />
-  <title>HW 과학 오답노트 byYoo</title>
+  <title>HW 과학 오답노트 byYHS</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔬</text></svg>" />
   <script>
     const _w = console.warn;
@@ -439,7 +439,7 @@ function PinLock({ onUnlock }) {
         .pin-shake{animation:pinShake 0.4s ease-out}
       `}</style>
       <div className="text-5xl mb-4">🔬</div>
-      <h1 className="text-lg font-bold text-slate-800 mb-1">HW 과학 오답노트 byYoo</h1>
+      <h1 className="text-lg font-bold text-slate-800 mb-1">HW 과학 오답노트 byYHS</h1>
       <p className="text-sm text-slate-500 mb-8">비밀번호를 입력하세요</p>
       <div className={"flex gap-4 mb-3 " + (shake ? "pin-shake" : "")}>{dots}</div>
       {error && <div className="text-xs text-red-500 font-semibold mb-2">비밀번호가 틀렸습니다</div>}
@@ -539,19 +539,26 @@ function StepByStep({ steps, errorStep, onReanalyze, reanalyzing, finalAnswer })
       {vis === steps.length && (
         <>
           {/* 최종 정답 강조 박스 */}
-          {steps.length > 0 && (finalAnswer || steps[steps.length - 1].math) && (
+          {steps.length > 0 && (finalAnswer || steps[steps.length - 1].math) && (() => {
+            const raw = finalAnswer || steps[steps.length - 1].math || "";
+            const hasEq = raw.includes("=");
+            const questionPart = hasEq ? raw.split("=").slice(0, -1).join("=").trim() : "";
+            const answerPart = hasEq ? raw.split("=").pop().trim() : raw;
+            return (
             <div className="p-4 rounded-xl border-2 border-emerald-400 bg-gradient-to-r from-emerald-50 to-teal-50"
               style={{ animation: "fadeInUp 0.4s ease-out" }}>
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-lg">🎯</span>
                 <span className="font-bold text-emerald-800">최종 정답</span>
               </div>
+              {questionPart && <div className="text-xs text-slate-500 text-center mb-1">{questionPart}</div>}
               <div className="px-4 py-3 bg-white rounded-lg border border-emerald-200 text-center">
-                <span className="text-lg font-bold text-emerald-700"><MathText text={finalAnswer || steps[steps.length - 1].math} /></span>
+                <span className="text-2xl font-bold text-emerald-700"><MathText text={answerPart} /></span>
               </div>
               <div className="mt-2 text-xs italic text-slate-400 text-center">아직 AI 풀이는 오류가 있을 수 있습니다. 따라서 틀린 문제의 정답을 먼저 확인하세요.</div>
             </div>
-          )}
+            );
+          })()}
           <div className="flex items-center justify-center gap-3 py-3">
             <div className="text-emerald-600 font-semibold flex items-center gap-2">
               <Ic n="chk" sz={18} /> 풀이 완료!
@@ -1471,7 +1478,7 @@ function Library({ problems, onSelect }) {
         {/* 헤더 */}
         <div className="text-center mb-8 border-b-2 pb-6">
           <div className="text-3xl mb-2">🔬</div>
-          <h1 className="text-2xl font-bold" style={{color:"#1e293b"}}>HW 과학 오답노트 byYoo</h1>
+          <h1 className="text-2xl font-bold" style={{color:"#1e293b"}}>HW 과학 오답노트 byYHS</h1>
           <p className="text-sm mt-2" style={{color:"#64748b"}}>{fG !== "all" ? fG : "모든 학년"} · {fU !== "all" ? fU : "모든 단원"} · {list.length}문제 · {new Date().toLocaleDateString("ko-KR")}</p>
         </div>
 
@@ -2085,7 +2092,7 @@ function App() {
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-lg">🔬</div>
-            <h1 className="font-bold text-slate-800 text-sm">HW 과학 오답노트 byYoo</h1>
+            <h1 className="font-bold text-slate-800 text-sm">HW 과학 오답노트 byYHS</h1>
           </div>
           <div className="flex items-center gap-1">
             <button onClick={() => setFsize((n) => (n + 1) % 3)} title="글자 크기 조절"
