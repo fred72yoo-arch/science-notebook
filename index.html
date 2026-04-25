@@ -1316,7 +1316,7 @@ function Detail({ problem: initP, onClose, onUpdate, onDelete, onSaveSilent }) {
           <span className="animate-spin text-lg">⟳</span>
           <div>
             <div className="font-semibold text-purple-700 text-sm">유사 문제 생성 중...</div>
-            <div className="text-xs text-purple-500">AI가 비슷한 유형의 문제 2개를 만들고 있습니다 (15~30초)</div>
+            <div className="text-xs text-purple-500">AI가 비슷한 유형의 문제 1개를 만들고 있습니다 (10~20초)</div>
           </div>
         </div>
       )}
@@ -1337,7 +1337,7 @@ function Detail({ problem: initP, onClose, onUpdate, onDelete, onSaveSilent }) {
           <div className="p-4 space-y-3">
             {/* 문제 텍스트 */}
             <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-              <div className="text-sm text-slate-800 leading-relaxed"><MathText text={sp.problemText || ""} /></div>
+              <div className="text-sm text-slate-800 leading-relaxed whitespace-pre-wrap break-words">{sp.problemText || ""}</div>
             </div>
 
             {/* 풀어보기 + 정답 확인 버튼 */}
