@@ -30,6 +30,7 @@
   <style>
     * { -webkit-tap-highlight-color: transparent; }
     body { margin: 0; padding: 0; }
+    .katex-display, .katex { overflow-x: auto; overflow-y: hidden; max-width: 100%; }
     @supports(padding: env(safe-area-inset-bottom)) {
       nav { padding-bottom: env(safe-area-inset-bottom) !important; }
     }
@@ -552,8 +553,8 @@ function StepByStep({ steps, errorStep, onReanalyze, reanalyzing, finalAnswer })
                 <span className="font-bold text-emerald-800">최종 정답</span>
               </div>
               {questionPart && <div className="text-xs text-slate-500 text-center mb-1">{questionPart}</div>}
-              <div className="px-4 py-3 bg-white rounded-lg border border-emerald-200 text-center">
-                <span className="text-2xl font-bold text-emerald-700"><MathText text={answerPart} /></span>
+              <div className="px-4 py-3 bg-white rounded-lg border border-emerald-200 text-center overflow-hidden">
+                <span className="text-2xl font-bold text-emerald-700 break-words"><MathText text={answerPart} /></span>
               </div>
               <div className="mt-2 text-xs italic text-slate-400 text-center">아직 AI 풀이는 오류가 있을 수 있습니다. 따라서 틀린 문제의 정답을 먼저 확인하세요.</div>
             </div>
@@ -1188,13 +1189,13 @@ function Detail({ problem: initP, onClose, onUpdate, onDelete, onSaveSilent }) {
               </span>
             </div>
             <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="px-3 py-2 bg-white rounded-lg border">
+              <div className="px-3 py-2 bg-white rounded-lg border overflow-hidden">
                 <div className="text-slate-500 mb-1">기존 정답</div>
-                <div className="font-bold text-slate-800"><MathText text={oldAnswer} /></div>
+                <div className="font-bold text-slate-800 break-words"><MathText text={oldAnswer} /></div>
               </div>
-              <div className="px-3 py-2 bg-white rounded-lg border">
+              <div className="px-3 py-2 bg-white rounded-lg border overflow-hidden">
                 <div className="text-slate-500 mb-1">새 정답</div>
-                <div className="font-bold text-indigo-700"><MathText text={newAnswer} /></div>
+                <div className="font-bold text-indigo-700 break-words"><MathText text={newAnswer} /></div>
               </div>
             </div>
           </div>
