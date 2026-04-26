@@ -43,6 +43,16 @@ module.exports = async function handler(req, res) {
       role: "user",
       content: "아래 원본 문제를 참고하여 비슷한 유형의 문제 1개를 만들어주세요.\n\n" + problemContext,
     }];
+  } else if (mode === "reanalyze_text") {
+    // 텍스트 기반 재분석 모드 (유사 문제용)
+    if (!problemContext) return res.status(400).json({ error: { message: "문제 정보가 필요합니다." } });
+
+    systemPrompt = "당신은 중학교·고등학교 과학 교육 전문가입니다. 물리, 화학, 생물, 지구과학 전 분야에 능통합니다.\n아래 과학 문제를 다시 풀어주세요. 기존 풀이와 다른 관점에서 풀어보세요.\nJSON 외의 텍스트(설명, 마크다운 코드블록 등)는 절대 포함하지 마세요.\n\n{\"title\":\"문제 요약 제목\",\"grade\":\"학년(중1/중2/중3/고1/고2/고3)\",\"unit\":\"단원명\",\"difficulty\":\"하 또는 중 또는 상\",\"tags\":[\"태그\"],\"problemText\":\"문제 원문\",\"errorStep\":null,\"errorAnalysis\":null,\"solutionSteps\":[{\"num\":1,\"title\":\"단계명\",\"math\":\"수식/화학식/법칙\",\"explain\":\"설명\"}],\"finalAnswer\":\"문제의 최종 질문 = 답\",\"keyConcepts\":[\"개념\"],\"keyFormulas\":[\"공식/법칙\"],\"tip\":\"학습 팁\"}\n\n" + symbolGuide + "\n\n규칙:\n- 문제를 처음부터 다시 풀어주세요.\n- solutionSteps는 3~6단계로 작성하세요.\n- finalAnswer는 핵심 질문과 답만 최대한 짧게 쓰세요. 선다형은 번호만, 서술형은 답만. 괄호 설명 금지.";
+
+    messages = [{
+      role: "user",
+      content: "아래 과학 문제를 다시 풀어주세요.\n\n" + problemContext,
+    }];
   } else {
     if (!imageBase64) return res.status(400).json({ error: { message: "이미지가 필요합니다." } });
 
