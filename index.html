@@ -564,9 +564,18 @@ function StepByStep({ steps, errorStep, onReanalyze, reanalyzing, finalAnswer })
           {/* 최종 정답 강조 박스 */}
           {steps.length > 0 && (finalAnswer || steps[steps.length - 1].math) && (() => {
             const raw = finalAnswer || steps[steps.length - 1].math || "";
+            // "=" 기준으로 질문/답 분리
             const hasEq = raw.includes("=");
             const questionPart = hasEq ? raw.split("=").slice(0, -1).join("=").trim() : "";
-            const answerPart = hasEq ? raw.split("=").pop().trim() : raw;
+            const answerRaw = hasEq ? raw.split("=").pop().trim() : raw;
+            // "/" 또는 "(숫자)" 패턴으로 줄바꿈 분리
+            const answerLines = answerRaw
+              .replace(/\s*\/\s*/g, "\n")
+              .replace(/\s*\((\d+)\)\s*/g, "\n($1) ")
+              .split("\n")
+              .map(l => l.trim())
+              .filter(l => l.length > 0);
+            const isMultiLine = answerLines.length > 1;
             return (
             <div className="p-4 rounded-xl border-2 border-emerald-400 bg-gradient-to-r from-emerald-50 to-teal-50"
               style={{ animation: "fadeInUp 0.4s ease-out" }}>
@@ -575,8 +584,10 @@ function StepByStep({ steps, errorStep, onReanalyze, reanalyzing, finalAnswer })
                 <span className="font-bold text-emerald-800">최종 정답</span>
               </div>
               {questionPart && <div className="text-xs text-slate-500 text-center mb-1">{questionPart}</div>}
-              <div className="px-4 py-3 bg-white rounded-lg border border-emerald-200 text-center overflow-hidden">
-                <span className="text-2xl font-bold text-emerald-700 break-words"><MathText text={answerPart} /></span>
+              <div className={"px-4 py-3 bg-white rounded-lg border border-emerald-200 " + (isMultiLine ? "text-left" : "text-center")}>
+                {answerLines.map((line, i) => (
+                  <div key={i} className={(isMultiLine ? "text-base py-0.5" : "text-2xl") + " font-bold text-emerald-700 break-words"}>{line}</div>
+                ))}
               </div>
               <div className="mt-2 text-xs italic text-slate-400 text-center">아직 AI 풀이는 오류가 있을 수 있습니다. 따라서 틀린 문제의 정답을 먼저 확인하세요.</div>
             </div>
