@@ -10,7 +10,7 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const { imageBase64, mimeType, apiKey, mode, problemContext } = req.body;
+  const { imageBase64, mimeType, apiKey, mode, problemContext, correctAnswer, answerImageBase64, answerMimeType } = req.body;
 
   if (!apiKey) return res.status(400).json({ error: { message: "API 키가 필요합니다." } });
 
@@ -53,8 +53,41 @@ module.exports = async function handler(req, res) {
       role: "user",
       content: "아래 과학 문제를 다시 풀어주세요.\n\n" + problemContext,
     }];
+  } else if (mode === "resolve_with_answer") {
+    // 정답 힌트 재분석 모드 (이미지 또는 텍스트 + 정답 텍스트/이미지)
+    if (!correctAnswer && !answerImageBase64) return res.status(400).json({ error: { message: "정답 정보가 필요합니다." } });
+
+    systemPrompt = "당신은 중학교·고등학교 과학 교육 전문가입니다. 물리, 화학, 생물, 지구과학 전 분야에 능통합니다.\n학생이 정답을 알려주었습니다. 이 정답이 올바르다고 가정하고, 정답에 도달하는 완벽한 풀이 과정을 작성하세요.\nJSON 외의 텍스트(설명, 마크다운 코드블록 등)는 절대 포함하지 마세요.\n\n{\"title\":\"문제 요약 제목\",\"grade\":\"학년(중1/중2/중3/고1/고2/고3)\",\"unit\":\"단원명\",\"difficulty\":\"하 또는 중 또는 상\",\"tags\":[\"태그\"],\"problemText\":\"문제 원문\",\"solutionSteps\":[{\"num\":1,\"title\":\"단계명\",\"math\":\"수식/화학식/법칙\",\"explain\":\"설명\"}],\"finalAnswer\":\"문제의 최종 질문 = 답\",\"keyConcepts\":[\"개념\"],\"keyFormulas\":[\"공식/법칙\"],\"tip\":\"학습 팁\"}\n\n" + symbolGuide + "\n\n규칙:\n- 반드시 주어진 정답에 도달하는 풀이를 작성하세요.\n- solutionSteps는 3~6단계로, 각 단계를 명확하게 작성하세요.\n- 이전에 AI가 틀렸을 수 있으므로, 문제를 아주 주의 깊게 다시 읽고 풀어주세요.\n- finalAnswer는 핵심 질문과 답만 최대한 짧게 쓰세요. 괄호 설명 금지.\n- tip에는 이 문제에서 실수하기 쉬운 포인트를 적어주세요.";
+
+    const contentParts = [];
+    if (imageBase64) {
+      contentParts.push({ type: "image", source: { type: "base64", media_type: mimeType || "image/jpeg", data: imageBase64 } });
+    }
+    if (answerImageBase64) {
+      contentParts.push({ type: "image", source: { type: "base64", media_type: answerMimeType || "image/png", data: answerImageBase64 } });
+    }
+
+    let promptText;
+    if (answerImageBase64 && imageBase64) {
+      promptText = "첫 번째 이미지는 과학 문제이고, 두 번째 이미지는 학생이 손으로 쓴 정답입니다. 두 번째 이미지에 적힌 정답을 정확히 읽고, 그 정답이 나오도록 처음부터 정확하게 풀이해주세요.";
+    } else if (answerImageBase64 && problemContext) {
+      promptText = "학생이 손으로 쓴 정답 이미지입니다. 이미지에 적힌 정답을 정확히 읽고, 아래 문제에서 그 정답이 나오도록 처음부터 정확하게 풀이해주세요.\n\n" + problemContext;
+    } else if (correctAnswer && imageBase64) {
+      promptText = "이 과학 문제의 정답은 「" + correctAnswer + "」입니다. 이 정답이 나오도록 처음부터 정확하게 풀이해주세요.";
+    } else if (correctAnswer && problemContext) {
+      promptText = "아래 과학 문제의 정답은 「" + correctAnswer + "」입니다. 이 정답이 나오도록 처음부터 정확하게 풀이해주세요.\n\n" + problemContext;
+    } else {
+      return res.status(400).json({ error: { message: "문제 이미지/텍스트와 정답이 필요합니다." } });
+    }
+
+    contentParts.push({ type: "text", text: promptText });
+
+    if (contentParts.length === 1 && contentParts[0].type === "text") {
+      messages = [{ role: "user", content: promptText }];
+    } else {
+      messages = [{ role: "user", content: contentParts }];
+    }
   } else {
-    if (!imageBase64) return res.status(400).json({ error: { message: "이미지가 필요합니다." } });
 
     systemPrompt = "당신은 중학교·고등학교 과학 교육 전문가입니다. 물리, 화학, 생물, 지구과학 전 분야에 능통합니다.\n학생이 업로드한 과학 문제 이미지를 분석하고 아래 JSON 형식으로만 응답하세요.\nJSON 외의 텍스트(설명, 마크다운 코드블록 등)는 절대 포함하지 마세요.\n\n{\"title\":\"문제 요약 제목\",\"grade\":\"학년(중1/중2/중3/고1/고2/고3)\",\"unit\":\"단원명\",\"difficulty\":\"하 또는 중 또는 상\",\"tags\":[\"태그\"],\"problemText\":\"문제 원문\",\"errorStep\":null,\"errorAnalysis\":null,\"solutionSteps\":[{\"num\":1,\"title\":\"단계명\",\"math\":\"수식/화학식/법칙\",\"explain\":\"설명\"}],\"finalAnswer\":\"문제의 최종 질문 = 답\",\"keyConcepts\":[\"개념\"],\"keyFormulas\":[\"공식/법칙\"],\"tip\":\"학습 팁\"}\n\n" + symbolGuide + "\n\n규칙:\n- 풀이가 포함된 이미지면 학생의 오류를 찾아 errorStep(번호)과 errorAnalysis(설명)를 채우세요.\n- 문제만 있으면 올바른 풀이를 작성하고 errorStep/errorAnalysis는 null로 두세요.\n- solutionSteps는 3~6단계로 작성하세요.\n- 과학 분야(물리/화학/생물/지구과학)를 자동 감지하여 적절한 단원명을 지정하세요.\n- finalAnswer는 핵심 질문과 답만 최대한 짧게 쓰세요. 보기의 설명·괄호 내용은 절대 포함하지 마세요.\n  선다형: \"옳지 않은 설명 = ③\", \"정답 = ④\", \"올바른 것 = ㄱ, ㄷ\"\n  서술형: \"가속도 = 3m/s²\", \"생성물의 질량 = 36g\", \"바람 방향 = 해풍\"\n  ★ 금지: \"③(에라토스테네스는 지구를...)\" ← 이런 괄호 설명 금지. 번호만 쓸 것.\n  다답형(소문항 여러개): \"(1) 인슐린 / (2) 이자 / (3) 글리코겐 저장 촉진\" ← 각 답을 /로 구분, 핵심 단어만.";
 
